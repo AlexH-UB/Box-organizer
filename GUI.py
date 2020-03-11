@@ -7,10 +7,8 @@ from PyQt5.QtCore import QDate, QTime, QDateTime, Qt
 import Core
 import keyboard
 
-Version = 'V3.0.1'
+Version = 'V3.0.2'
 
-#Ideas:
-    # multiple selection of boxes
 
 
 class Box_MainWindow(object):
@@ -18,11 +16,11 @@ class Box_MainWindow(object):
         
         self.currentBut = 'A1'
         self.boxes = []
-        self.SubjectDialog = None
+        self.SearchDialog = None
         self.times_list = []
         self.Path = self.load_save_path()
         
-        MainWindow.resize(900, 650)
+        MainWindow.resize(875, 650)
         MainWindow.setWindowTitle("Box Saver Second Gen "+Version)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         
@@ -66,15 +64,12 @@ class Box_MainWindow(object):
         
         self.pushButton_4 = QtWidgets.QPushButton(MainWindow)
         self.pushButton_4.setGeometry(QtCore.QRect(785, 95, 75, 23))
-        self.pushButton_4.setText('Reset')
-        self.pushButton_5 = QtWidgets.QPushButton(MainWindow)
-        self.pushButton_5.setGeometry(QtCore.QRect(785, 35, 75, 23))
-        self.pushButton_5.setText('Search')   
+        self.pushButton_4.setText('Reset')  
         self.pushButton_6 = QtWidgets.QPushButton(MainWindow)
-        self.pushButton_6.setGeometry(QtCore.QRect(760, 35, 23, 23))
+        self.pushButton_6.setGeometry(QtCore.QRect(837, 34, 25, 25))
         self.pushButton_6.setText('X')           
         self.LineEdit_search = QtWidgets.QLineEdit(MainWindow)
-        self.LineEdit_search.setGeometry(QtCore.QRect(627, 35, 130, 23))
+        self.LineEdit_search.setGeometry(QtCore.QRect(702, 35, 130, 23))
         self.Label_Info = QtWidgets.QListWidget(MainWindow)
         self.Label_Info.setGeometry(QtCore.QRect(520, 520, 340, 100))
         
@@ -180,7 +175,7 @@ class Box_MainWindow(object):
         self.pushButton_2.clicked.connect(self.def_save_path)
         self.pushButton_3.clicked.connect(self.save_single_box)
         self.pushButton_4.clicked.connect(self.reset_box_entries)
-        self.pushButton_5.clicked.connect(self.search)
+        self.LineEdit_search.returnPressed.connect(self.search)
         self.pushButton_6.clicked.connect(self.reset_search)
         self.cal.selectionChanged.connect(self.show_times_to_dates)
         self.jump_button.clicked.connect(self.jump_to_box)
@@ -188,6 +183,7 @@ class Box_MainWindow(object):
         self.created_rbutton.clicked.connect(self.create_lastedit_toggle)
         self.lastedit_rbutton.clicked.connect(self.create_lastedit_toggle)
         self.pushButton_refs.clicked.connect(self.hit_ref)
+        self.ListWidget_date_display.itemDoubleClicked.connect(self.jump_to_box)
         
 #End of init methods 
         
@@ -420,11 +416,33 @@ class Box_MainWindow(object):
         
     def search(self):
         s = self.LineEdit_search.text()
-        for box in self.boxes:
-                for key, value in box.data.note_dict.items():
-                    if s in value.name or s in value.ref or s in value.des:
-                        box.but_dict[key].setStyleSheet("background-color: #87CEFA")
-        self.Label_Info.addItem('"'+s+'" was found in the blue marked buttons!')
+        if s != '':
+            if self.SearchDialog == None:
+                self.SearchDialog = SearchDialog(MainWindow)
+                self.SearchDialog.move(1400,164)
+                self.SearchDialog.setWindowTitle('Advanced Search')
+                self.SearchDialog.ListWidget_search.itemDoubleClicked.connect(self.goto_box)
+                self.SearchDialog.show()
+            else:
+                self.SearchDialog.show()
+                self.SearchDialog.ListWidget_search.clear()
+                
+            for box in self.boxes:
+                    for key, value in box.data.note_dict.items():
+                        if s in value.name or s in value.ref or s in value.des:
+                            if len(value.name) > 12:
+                                nam = value.name[:10]
+                            elif value.name == '':
+                                nam = '...'
+                            else:
+                                nam = value.name
+                            if len(box.name) > 12:
+                                box_name = box.name[:10]
+                            else:
+                                box_name = box.name
+                            self.SearchDialog.ListWidget_search.addItem('Box: {} \tName: {} Slot: {}'.format(box_name, nam, key))
+                            box.but_dict[key].setStyleSheet("background-color: #87CEFA")
+            self.Label_Info.addItem('"'+s+'" was found in the blue marked buttons!')
                         
     def reset_search(self):
         for box in self.boxes:
@@ -433,17 +451,6 @@ class Box_MainWindow(object):
                     box.but_dict[key].setStyleSheet("background-color: #8D8282")
         self.Label_Info.addItem('Search was reset!')
         self.LineEdit_search.setText('')
-        
-    def show_subject(self):
-        if self.SubjectDialog == None:
-            a = SubjectDialog(MainWindow)
-            self.SubjectDialog = a
-            self.SubjectDialog.move(1405,202)
-            self.SubjectDialog.setWindowTitle('Advanced Search')
-            self.SubjectDialog.show()
-        else:
-            self.SubjectDialog.show()
-            self.Label_Info.addItem('You already have a search window open!')
         
     def show_times_to_dates(self):
         self.displayed_dates_lastedit = []
@@ -488,8 +495,17 @@ class Box_MainWindow(object):
         self.ref_box.but_dict[self.ref_but].setFlat(False)    
         self.ref_text = self.textEdit.toPlainText()
         
-    def print_notes(self):
-        print(self.boxes[self.tabWidget.currentIndex()-1].data.note_dict[self.currentBut].getData())
+    def goto_box(self):
+        if self.SearchDialog.ListWidget_search.currentRow() >= 0:
+            press = [0,0]
+            curr_text = self.SearchDialog.ListWidget_search.selectedItems()[0].text()
+            press[0] = curr_text[5:curr_text.find('Name:')-2]
+            press[1] = curr_text[-2:]
+            for ind, el in enumerate(self.boxes):
+                if el.name == press[0]:
+                    self.tabWidget.setCurrentIndex(ind+1)
+                    self.button_push(el, press[1])
+           
                 
                 
 class Box():
@@ -517,6 +533,7 @@ class Box():
         self.jump_button_refs.setGeometry(QtCore.QRect(380, 425, 50, 50))
         self.jump_button_refs.setText('Jump')              
         self.jump_button_refs.clicked.connect(self.main.jump_to_box_refs)
+        self.ListWidget_refs.itemDoubleClicked.connect(self.main.jump_to_box_refs)
         
         self.Button_init()
         self.main.tabWidget.setCurrentIndex(self.tabsm.indexOf(self.tab))
@@ -578,6 +595,21 @@ class dateCalendar(QtWidgets.QCalendarWidget):
         self.dateList = qdatesList
         #this redraws the calendar with your updated date list
         self.updateCells()
+        
+class SearchDialog(QDialog):
+    
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.main = parent
+        self.resize(300,300)
+        self.init_list()
+        self.show()
+        
+    def init_list(self):
+        self.ListWidget_search = QtWidgets.QListWidget(self)
+        self.ListWidget_search.setGeometry(QtCore.QRect(10, 10, 280, 280))
+        
+        
         
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
