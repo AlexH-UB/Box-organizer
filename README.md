@@ -22,3 +22,17 @@ Lots of reaction tubes are generated nn biological laboratories and it is easy t
 * Update code according to PEP20 guidelines
 
 ---
+
+### Installation:
+
+Install required python libraries:
+
+```python
+# pip install -r requirements.txt
+```
+
+Run the application:
+
+```python
+# python GUI.py
+```
